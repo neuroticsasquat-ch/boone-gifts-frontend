@@ -572,20 +572,19 @@ function ViewerGiftRow({
 
   const isPending = claimMutation.isPending || unclaimMutation.isPending;
 
-  let claimButton: React.ReactNode = null;
-  if (!isArchived) {
-    if (gift.claimed_by_id === null) {
-      claimButton = (
-        <button
-          onClick={() => claimMutation.mutate()}
-          disabled={isPending}
-          className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
-        >
-          {claimMutation.isPending ? "Saving…" : "I'll get this"}
-        </button>
-      );
-    } else if (gift.claimed_by_id === userId) {
-      claimButton = (
+  const isMine = gift.claimed_by_id === userId;
+  const isTaken = gift.claimed_by_id !== null && !isMine;
+  const isAvailable = gift.claimed_by_id === null;
+
+  let rowStyle = "";
+  let statusLabel: React.ReactNode = null;
+  let actionButton: React.ReactNode = null;
+
+  if (isMine) {
+    rowStyle = "border-l-4 border-green-500 bg-green-50";
+    statusLabel = <span className="text-xs font-medium text-green-700">✓ You're getting this</span>;
+    if (!isArchived) {
+      actionButton = (
         <button
           onClick={() => {
             if (window.confirm("Are you sure you no longer want to get this gift?")) {
@@ -598,19 +597,29 @@ function ViewerGiftRow({
           {unclaimMutation.isPending ? "Saving…" : "Never mind"}
         </button>
       );
-    } else {
-      claimButton = (
-        <span className="rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-500">Someone's getting this</span>
-      );
     }
+  } else if (isTaken) {
+    rowStyle = "bg-gray-50 opacity-60";
+    statusLabel = <span className="text-xs font-medium text-gray-400">Someone's getting this</span>;
+  } else if (isAvailable && !isArchived) {
+    actionButton = (
+      <button
+        onClick={() => claimMutation.mutate()}
+        disabled={isPending}
+        className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+      >
+        {claimMutation.isPending ? "Saving…" : "I'll get this"}
+      </button>
+    );
   }
 
   return (
-    <li className="flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between">
+    <li className={`flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between ${rowStyle}`}>
       <GiftInfo name={gift.name} description={gift.description} url={gift.url} price={gift.price} />
-      <div className="flex items-center justify-between md:justify-end gap-2 shrink-0 md:ml-4">
+      <div className="flex flex-col items-end gap-1 shrink-0 md:ml-4">
         {gift.price && <span className="text-sm text-gray-500 md:hidden">${gift.price}</span>}
-        {claimButton && <div className="ml-auto md:ml-0">{claimButton}</div>}
+        {statusLabel}
+        {actionButton}
       </div>
     </li>
   );
