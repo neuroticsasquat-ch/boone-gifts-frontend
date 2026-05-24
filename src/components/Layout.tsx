@@ -55,6 +55,7 @@ export function Layout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const prevPathRef = useRef(location.pathname);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -67,9 +68,10 @@ export function Layout() {
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
 
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
+  if (location.pathname !== prevPathRef.current) {
+    prevPathRef.current = location.pathname;
+    if (menuOpen) setMenuOpen(false);
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
