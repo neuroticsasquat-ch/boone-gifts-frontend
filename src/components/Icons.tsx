@@ -7,7 +7,10 @@ function cx(base: string, className?: string) {
 export function GiftIcon({ className }: { className?: string }) {
   return (
     <svg className={cx(defaults, className)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v13m0-13V6a4 4 0 00-4-4c-1.5 0-2.7.8-3.4 2M12 8V6a4 4 0 014-4c1.5 0 2.7.8 3.4 2M6 8h12M6 8a2 2 0 00-2 2v2h16v-2a2 2 0 00-2-2M4 12h16v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 9h16v11a1 1 0 01-1 1H5a1 1 0 01-1-1V9z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 6h18a1 1 0 011 1v2H2V7a1 1 0 011-1z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v15" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6c0-1.5-1-3-3-3S6 4 7.5 6M12 6c0-1.5 1-3 3-3s3 1.5 1.5 3" />
     </svg>
   );
 }
