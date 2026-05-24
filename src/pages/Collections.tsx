@@ -5,6 +5,7 @@ import { getCollections, createCollection, deleteCollection } from "../api/colle
 import { useTitle } from "../hooks/useTitle";
 import toast from "react-hot-toast";
 import { Spinner } from "../components/Spinner";
+import { FolderOpenIcon } from "../components/Icons";
 
 export function Collections() {
   useTitle("Collections");
@@ -28,14 +29,14 @@ export function Collections() {
 
   if (collections.isPending) return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
+      <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900"><FolderOpenIcon className="h-6 w-6" /> Collections</h1>
       <Spinner />
     </div>
   );
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold text-gray-900">Collections</h1>
+      <h1 className="flex items-center gap-2 text-2xl font-bold text-gray-900"><FolderOpenIcon className="h-6 w-6" /> Collections</h1>
 
       <CreateCollectionForm queryClient={queryClient} />
 
