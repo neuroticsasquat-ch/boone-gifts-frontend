@@ -55,7 +55,6 @@ export function Layout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const prevPathRef = useRef(location.pathname);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -67,11 +66,6 @@ export function Layout() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, [menuOpen]);
-
-  if (location.pathname !== prevPathRef.current) {
-    prevPathRef.current = location.pathname;
-    if (menuOpen) setMenuOpen(false);
-  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
@@ -111,16 +105,16 @@ export function Layout() {
                   <p className="text-sm font-medium text-gray-900 truncate">{user?.email}</p>
                 </div>
                 <div className="py-1">
-                  <Link to="/account" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <Link to="/account" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                     Account Settings
                   </Link>
                   {user?.role === "admin" && (
                     <>
                       <hr className="my-1 border-gray-100" />
-                      <Link to="/admin/invites" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link to="/admin/invites" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Manage Invites
                       </Link>
-                      <Link to="/admin/users" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link to="/admin/users" onClick={() => setMenuOpen(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                         Manage Users
                       </Link>
                     </>
