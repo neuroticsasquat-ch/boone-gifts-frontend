@@ -116,7 +116,7 @@ describe("ListDetail Sharing Section", () => {
     await userEvent.click(screen.getByText("Shared with"));
 
     await waitFor(() => {
-      expect(screen.getByText("This list hasn't been shared with anyone else.")).toBeInTheDocument();
+      expect(screen.getByText("Owner hasn't shared this list with anyone else.")).toBeInTheDocument();
     });
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
