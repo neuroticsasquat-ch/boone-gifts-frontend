@@ -614,10 +614,11 @@ function ViewerGiftRow({
   }
 
   return (
-    <li className={`flex flex-col gap-2 px-4 py-3 md:flex-row md:items-center md:justify-between ${rowStyle}`}>
-      <GiftInfo name={gift.name} description={gift.description} url={gift.url} price={gift.price} />
-      <div className="flex flex-col items-end gap-1 shrink-0 md:ml-4">
-        {gift.price && <span className="text-sm text-gray-500 md:hidden">${gift.price}</span>}
+    <li className={`flex items-center justify-between gap-2 px-4 py-2 ${rowStyle}`}>
+      <div className="min-w-0 flex-1">
+        <GiftInfo name={gift.name} description={gift.description} url={gift.url} price={gift.price} />
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
         {statusLabel}
         {actionButton}
       </div>
