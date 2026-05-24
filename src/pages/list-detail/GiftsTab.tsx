@@ -577,12 +577,10 @@ function ViewerGiftRow({
   const isAvailable = gift.claimed_by_id === null;
 
   let rowStyle = "";
-  let statusLabel: React.ReactNode = null;
   let actionButton: React.ReactNode = null;
 
   if (isMine) {
     rowStyle = "border-l-4 border-green-500 bg-green-50";
-    statusLabel = <span className="text-xs font-medium text-green-700">✓ You're getting this</span>;
     if (!isArchived) {
       actionButton = (
         <button
@@ -592,21 +590,20 @@ function ViewerGiftRow({
             }
           }}
           disabled={isPending}
-          className="rounded bg-yellow-600 px-3 py-1 text-sm font-medium text-white hover:bg-yellow-700 disabled:opacity-50"
+          className="rounded bg-yellow-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-yellow-700 disabled:opacity-50"
         >
           {unclaimMutation.isPending ? "Saving…" : "Never mind"}
         </button>
       );
     }
   } else if (isTaken) {
-    rowStyle = "bg-gray-50 opacity-60";
-    statusLabel = <span className="text-xs font-medium text-gray-400">Someone's getting this</span>;
+    rowStyle = "bg-gray-50 opacity-50";
   } else if (isAvailable && !isArchived) {
     actionButton = (
       <button
         onClick={() => claimMutation.mutate()}
         disabled={isPending}
-        className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+        className="rounded bg-green-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
       >
         {claimMutation.isPending ? "Saving…" : "I'll get this"}
       </button>
@@ -614,14 +611,18 @@ function ViewerGiftRow({
   }
 
   return (
-    <li className={`flex items-center justify-between gap-2 px-4 py-2 ${rowStyle}`}>
-      <div className="min-w-0 flex-1">
-        <GiftInfo name={gift.name} description={gift.description} url={gift.url} price={gift.price} />
+    <li className={`px-4 py-2 ${rowStyle}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <GiftInfo name={gift.name} description={gift.description} url={gift.url} price={gift.price} />
+        </div>
+        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+          {isMine && <span className="text-xs text-green-700">✓ Yours</span>}
+          {isTaken && <span className="text-xs text-gray-400">Taken</span>}
+          {actionButton}
+        </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {statusLabel}
-        {actionButton}
-      </div>
+      {gift.price && <p className="text-xs text-gray-400 mt-0.5">${gift.price}</p>}
     </li>
   );
 }
