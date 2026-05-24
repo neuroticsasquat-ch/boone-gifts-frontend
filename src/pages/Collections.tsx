@@ -96,7 +96,7 @@ function CreateCollectionForm({
     <form onSubmit={handleSubmit} className="rounded-lg bg-white p-4 shadow">
       <h2 className="text-sm font-semibold text-gray-700 mb-3">Create a Collection</h2>
 
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row">
         <input
           type="text"
           placeholder="Collection name"
@@ -115,7 +115,7 @@ function CreateCollectionForm({
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 shrink-0"
         >
           {mutation.isPending ? "Creating\u2026" : "Create"}
         </button>

@@ -9,9 +9,9 @@ import { Spinner } from "../components/Spinner";
 
 function SummaryCard({ title, count, to }: { title: string; count: number | undefined; to: string }) {
   return (
-    <Link to={to} className="block rounded-lg bg-white p-6 shadow hover:shadow-md transition-shadow">
+    <Link to={to} className="block rounded-lg bg-white p-4 shadow hover:shadow-md transition-shadow">
       <p className="text-sm text-gray-600">{title}</p>
-      <p className="mt-1 text-3xl font-bold text-gray-900">{count ?? "—"}</p>
+      <p className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">{count ?? "—"}</p>
     </Link>
   );
 }
@@ -55,7 +55,7 @@ export function Dashboard() {
       <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
         <SummaryCard title="My Lists" count={ownedLists.data?.length} to="/lists" />
         <SummaryCard title="Connection Requests" count={requests.data?.length} to="/connections" />
         <SummaryCard title="Collections" count={collections.data?.length} to="/collections" />

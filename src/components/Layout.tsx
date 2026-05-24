@@ -87,6 +87,9 @@ export function Layout() {
           </button>
         </div>
         <div className="flex flex-col px-4 py-4 gap-4">
+          <Link to="/" onClick={closeDrawer} className="text-gray-600 hover:text-gray-900 py-2">
+            Dashboard
+          </Link>
           <Link to="/lists" onClick={closeDrawer} className="text-gray-600 hover:text-gray-900 py-2">
             Lists
           </Link>
@@ -96,6 +99,17 @@ export function Layout() {
           <Link to="/collections" onClick={closeDrawer} className="text-gray-600 hover:text-gray-900 py-2">
             Collections
           </Link>
+          {user?.role === "admin" && (
+            <>
+              <hr className="border-gray-200" />
+              <Link to="/admin/invites" onClick={closeDrawer} className="text-gray-600 hover:text-gray-900 py-2">
+                Invites
+              </Link>
+              <Link to="/admin/users" onClick={closeDrawer} className="text-gray-600 hover:text-gray-900 py-2">
+                Users
+              </Link>
+            </>
+          )}
           <hr className="border-gray-200" />
           <Link to="/account" onClick={closeDrawer} className="text-sm text-gray-600 hover:text-gray-900 py-2">
             {user?.email}
