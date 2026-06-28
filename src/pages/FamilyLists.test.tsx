@@ -35,7 +35,13 @@ describe("FamilyLists", () => {
 
   it("renders error message when API returns 500", async () => {
     server.use(
-      http.get(`${API}/lists`, () => HttpResponse.json({}, { status: 500 })),
+      http.get(`${API}/lists`, ({ request }) => {
+        const url = new URL(request.url);
+        if (url.searchParams.get("filter") === "family") {
+          return HttpResponse.json({}, { status: 500 });
+        }
+        return HttpResponse.error();
+      }),
     );
 
     renderFamilyLists();
@@ -53,7 +59,7 @@ describe("FamilyLists", () => {
         if (url.searchParams.get("filter") === "family") {
           return HttpResponse.json([]);
         }
-        return HttpResponse.json([]);
+        return HttpResponse.error();
       }),
     );
 

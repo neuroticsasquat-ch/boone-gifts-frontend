@@ -54,8 +54,8 @@ export function FamilyLists() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Family Lists</h1>
       {groups.map(({ family, lists }) => (
-        <section key={family.id}>
-          <h2 className="text-lg font-semibold text-gray-900">{family.name}</h2>
+        <section key={family.id} aria-labelledby={`family-${family.id}`}>
+          <h2 id={`family-${family.id}`} className="text-lg font-semibold text-gray-900">{family.name}</h2>
           <ul className="mt-3 divide-y divide-gray-200 rounded-lg bg-white shadow">
             {lists.map((list) => (
               <li key={list.id}>
