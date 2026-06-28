@@ -49,9 +49,9 @@ export function PendingFamilyInvites() {
     onError: (err) => handleMutationError(err, "decline"),
   });
 
-  if (!data || data.length === 0) return null;
-
   const isAnyPending = acceptMutation.isPending || declineMutation.isPending;
+
+  if (!data || data.length === 0) return null;
 
   return (
     <section>

@@ -55,11 +55,14 @@ describe("PendingFamilyInvites", () => {
       http.get(`${API}/families/invites`, () => HttpResponse.json([])),
     );
 
-    renderComponent();
+    const { queryClient } = renderComponent();
 
+    // Wait for the query to actually settle so the negative assertion proves
+    // "empty data → null", not "still loading → not rendered yet".
     await waitFor(() => {
-      expect(screen.queryByText("Pending Family Invites")).not.toBeInTheDocument();
+      expect(queryClient.getQueryState(["familyInvites"])?.status).toBe("success");
     });
+    expect(screen.queryByText("Pending Family Invites")).not.toBeInTheDocument();
   });
 
   it("fires POST /families/invites/{token}/accept when Accept is clicked", async () => {
