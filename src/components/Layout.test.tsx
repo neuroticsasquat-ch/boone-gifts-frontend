@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
@@ -113,8 +113,9 @@ describe("Layout", () => {
     renderLayout();
     await screen.findByLabelText("Account menu");
     await waitFor(() => {
-      // Badge with count 1 should appear (at least one badge span with "1")
-      expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
+      // Badge with count 1 should appear in the bottom mobile nav bar
+      const bottomNav = document.querySelector('nav.fixed');
+      expect(within(bottomNav as HTMLElement).getByText("1")).toBeInTheDocument();
     });
   });
 
@@ -138,9 +139,9 @@ describe("Layout", () => {
     await screen.findByLabelText("Account menu");
     await waitFor(() => {
       // The top nav Families link has an inline badge span
-      const topNav = document.querySelector("nav");
+      const topNav = document.querySelector('nav.bg-white.shadow');
       expect(topNav).toHaveTextContent("Families");
-      expect(topNav).toHaveTextContent("1");
+      expect(within(topNav as HTMLElement).getByText("1")).toBeInTheDocument();
     });
   });
 });
