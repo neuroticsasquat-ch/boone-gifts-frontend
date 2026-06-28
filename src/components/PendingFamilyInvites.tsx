@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
+import { isAxiosError } from "axios";
 import {
   getIncomingFamilyInvites,
   acceptFamilyInvite,
@@ -22,19 +23,30 @@ export function PendingFamilyInvites() {
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["familyInvites"] });
     queryClient.invalidateQueries({ queryKey: ["families"] });
+    // ["lists","family"] targets the family-lists view (NEU-351); invalidate now so it refreshes on accept
     queryClient.invalidateQueries({ queryKey: ["lists", "family"] });
+  };
+
+  const handleMutationError = (err: unknown, action: "accept" | "decline") => {
+    if (isAxiosError(err) && err.response?.status === 409) {
+      // Invite already accepted, declined, or expired — refresh so the stale row clears
+      queryClient.invalidateQueries({ queryKey: ["familyInvites"] });
+      toast.error("This invite is no longer valid.");
+    } else {
+      toast.error(`Failed to ${action} invite.`);
+    }
   };
 
   const acceptMutation = useMutation({
     mutationFn: acceptFamilyInvite,
     onSuccess: invalidateAll,
-    onError: () => toast.error("Failed to accept invite."),
+    onError: (err) => handleMutationError(err, "accept"),
   });
 
   const declineMutation = useMutation({
     mutationFn: declineFamilyInvite,
     onSuccess: invalidateAll,
-    onError: () => toast.error("Failed to decline invite."),
+    onError: (err) => handleMutationError(err, "decline"),
   });
 
   if (!data || data.length === 0) return null;

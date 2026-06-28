@@ -69,7 +69,6 @@ describe("PendingFamilyInvites", () => {
         acceptHandler(params.token);
         return HttpResponse.json({ family: testInvite.family, role: "member" });
       }),
-      http.get(`${API}/families/invites`, () => HttpResponse.json([])),
     );
 
     renderComponent();
@@ -91,7 +90,6 @@ describe("PendingFamilyInvites", () => {
         declineHandler(params.token);
         return new HttpResponse(null, { status: 204 });
       }),
-      http.get(`${API}/families/invites`, () => HttpResponse.json([])),
     );
 
     renderComponent();
@@ -101,6 +99,28 @@ describe("PendingFamilyInvites", () => {
 
     await waitFor(() => {
       expect(declineHandler).toHaveBeenCalledWith("tok-abc123");
+    });
+  });
+
+  it("invalidates familyInvites and shows stale-invite toast on 409 accept", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/accept`, () =>
+        new HttpResponse(null, { status: 409 })
+      ),
+    );
+
+    const { queryClient } = renderComponent();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const acceptBtn = await screen.findByText("Accept");
+    await userEvent.click(acceptBtn);
+
+    await waitFor(() => {
+      const keys = invalidateSpy.mock.calls.map(
+        (c) => (c[0] as { queryKey: unknown }).queryKey
+      );
+      expect(keys).toContainEqual(["familyInvites"]);
     });
   });
 

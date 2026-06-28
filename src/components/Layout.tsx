@@ -92,7 +92,7 @@ export function Layout() {
   return (
     <div className="min-h-screen bg-gray-50 pb-16 md:pb-0">
       {/* Top bar */}
-      <nav className="bg-white shadow">
+      <nav className="bg-white shadow" aria-label="Primary navigation">
         <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link to="/" className="flex items-center gap-1.5 text-xl font-bold text-gray-900">
@@ -178,7 +178,7 @@ export function Layout() {
       </main>
 
       {/* Bottom tab bar — mobile only */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 md:hidden">
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 md:hidden" aria-label="Mobile navigation">
         <div className="flex justify-around">
           {TABS.map(({ to, label, Icon, match }) => {
             const active = match(location.pathname);

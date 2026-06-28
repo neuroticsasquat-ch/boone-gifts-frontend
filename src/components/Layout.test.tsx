@@ -92,7 +92,7 @@ describe("Layout", () => {
   it("renders desktop nav links in the header", async () => {
     renderLayout();
     await screen.findByText("Home Content");
-    const topNav = document.querySelector("nav");
+    const topNav = screen.getByRole("navigation", { name: "Primary navigation" });
     expect(topNav).toHaveTextContent("Lists");
     expect(topNav).toHaveTextContent("Connections");
     expect(topNav).toHaveTextContent("Collections");
@@ -120,8 +120,8 @@ describe("Layout", () => {
     await screen.findByLabelText("Account menu");
     await waitFor(() => {
       // Badge with count 1 should appear in the bottom mobile nav bar
-      const bottomNav = document.querySelector('nav.fixed');
-      expect(within(bottomNav as HTMLElement).getByText("1")).toBeInTheDocument();
+      const bottomNav = screen.getByRole("navigation", { name: "Mobile navigation" });
+      expect(within(bottomNav).getByText("1")).toBeInTheDocument();
     });
   });
 
@@ -151,9 +151,9 @@ describe("Layout", () => {
     await screen.findByLabelText("Account menu");
     await waitFor(() => {
       // The top nav Families link has an inline badge span
-      const topNav = document.querySelector('nav.bg-white.shadow');
+      const topNav = screen.getByRole("navigation", { name: "Primary navigation" });
       expect(topNav).toHaveTextContent("Families");
-      expect(within(topNav as HTMLElement).getByText("1")).toBeInTheDocument();
+      expect(within(topNav).getByText("1")).toBeInTheDocument();
     });
   });
 });
