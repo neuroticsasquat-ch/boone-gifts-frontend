@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, delay } from "msw";
 import { server } from "../test/mocks/server";
 import { PendingFamilyInvites } from "./PendingFamilyInvites";
 
@@ -176,6 +176,29 @@ describe("PendingFamilyInvites", () => {
     expect((await screen.findAllByText("Failed to decline invite.")).length).toBeGreaterThan(0);
   });
 
+  it("invalidates familyInvites, families, and lists/family queries on decline", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/decline`, () =>
+        new HttpResponse(null, { status: 204 })
+      ),
+    );
+
+    const { queryClient } = renderComponent();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const declineBtn = await screen.findByText("Decline");
+    await userEvent.click(declineBtn);
+
+    await waitFor(() => {
+      const calls = invalidateSpy.mock.calls.map((c) => c[0]);
+      const keys = calls.map((c) => (c as { queryKey: unknown }).queryKey);
+      expect(keys).toContainEqual(["familyInvites"]);
+      expect(keys).toContainEqual(["families"]);
+      expect(keys).toContainEqual(["lists", "family"]);
+    });
+  });
+
   it("invalidates familyInvites, families, and lists/family queries on accept", async () => {
     server.use(
       http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
@@ -196,6 +219,26 @@ describe("PendingFamilyInvites", () => {
       expect(keys).toContainEqual(["familyInvites"]);
       expect(keys).toContainEqual(["families"]);
       expect(keys).toContainEqual(["lists", "family"]);
+    });
+  });
+
+  it("disables both Accept and Decline buttons while a mutation is in-flight", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/accept`, async () => {
+        await delay("infinite");
+        return HttpResponse.json({ family: testInvite.family, role: "member" });
+      }),
+    );
+
+    renderComponent();
+    const acceptBtn = await screen.findByText("Accept");
+    // Fire without awaiting so the mutation starts but does not resolve
+    userEvent.click(acceptBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Accept")).toBeDisabled();
+      expect(screen.getByText("Decline")).toBeDisabled();
     });
   });
 });
