@@ -5,6 +5,7 @@ import { getFamilies, createFamily } from "../api/families";
 import { useTitle } from "../hooks/useTitle";
 import toast from "react-hot-toast";
 import { Spinner } from "../components/Spinner";
+import { PendingFamilyInvites } from "../components/PendingFamilyInvites";
 
 export function Families() {
   useTitle("Families");
@@ -47,6 +48,8 @@ export function Families() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Families</h1>
+
+      <PendingFamilyInvites />
 
       <form onSubmit={handleSubmit} className="rounded-lg bg-white p-4 shadow">
         <h2 className="text-sm font-semibold text-gray-700 mb-3">Create a Family</h2>
