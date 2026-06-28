@@ -41,6 +41,7 @@ export function FamilyDetail() {
     onSuccess: () => {
       invalidate();
       setRenameError(null);
+      setRenameValue("");
       toast.success("Family renamed.");
     },
     onError: () => {

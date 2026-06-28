@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect } from "vitest";
-import { MemoryRouter } from "react-router";
+import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/mocks/server";
@@ -15,8 +15,11 @@ function renderFamilies() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <Families />
+      <MemoryRouter initialEntries={["/families"]}>
+        <Routes>
+          <Route path="/families" element={<Families />} />
+          <Route path="/families/:id" element={<div>Detail Page</div>} />
+        </Routes>
       </MemoryRouter>
     </QueryClientProvider>
   );
@@ -81,7 +84,7 @@ describe("Families", () => {
     await userEvent.click(screen.getByText("Create"));
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Family name")).toHaveValue("");
+      expect(screen.getByText("Detail Page")).toBeInTheDocument();
     });
   });
 

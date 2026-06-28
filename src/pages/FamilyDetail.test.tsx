@@ -225,7 +225,7 @@ describe("FamilyDetail", () => {
     });
   });
 
-  it("409 on demote shows last-organizer error message", async () => {
+  it("409 on promote shows last-organizer error message", async () => {
     server.use(
       http.get(`${API}/families/1`, () => HttpResponse.json(sampleFamily)),
       http.put(`${API}/families/1/members/2/role`, () =>
