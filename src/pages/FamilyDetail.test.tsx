@@ -344,7 +344,7 @@ describe("FamilyDetail", () => {
     expect(emailInput).toHaveValue("");
   });
 
-  it("revoke: pending invite shown, organizer clicks Revoke → DELETE /families/1/invites/:id called", async () => {
+  it("revoke: pending invite shown, organizer clicks Revoke → row disappears", async () => {
     const pendingInvite = {
       id: 10,
       family_id: 1,
@@ -360,12 +360,14 @@ describe("FamilyDetail", () => {
       status: "pending" as const,
     };
 
-    let revokeCallCount = 0;
+    let inviteDeleted = false;
     server.use(
       http.get(`${API}/families/1`, () => HttpResponse.json(sampleFamily)),
-      http.get(`${API}/families/1/invites`, () => HttpResponse.json([pendingInvite])),
+      http.get(`${API}/families/1/invites`, () =>
+        HttpResponse.json(inviteDeleted ? [] : [pendingInvite])
+      ),
       http.delete(`${API}/families/1/invites/10`, () => {
-        revokeCallCount++;
+        inviteDeleted = true;
         return new HttpResponse(null, { status: 204 });
       }),
     );
@@ -379,7 +381,7 @@ describe("FamilyDetail", () => {
     await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
 
     await waitFor(() => {
-      expect(revokeCallCount).toBe(1);
+      expect(screen.queryByText("pending@example.com")).not.toBeInTheDocument();
     });
   });
 
@@ -444,6 +446,6 @@ describe("FamilyDetail", () => {
 
     expect(screen.queryByPlaceholderText("Email address")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Send Invite" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Pending Invites")).not.toBeInTheDocument();
+    expect(screen.queryByText("Invites")).not.toBeInTheDocument();
   });
 });

@@ -55,7 +55,7 @@ export function FamilyDetail() {
       if (isAxiosError(err) && err.response?.status === 409) {
         setInviteError("A pending invite for that email already exists.");
       } else if (isAxiosError(err) && err.response?.status === 400) {
-        setInviteError(err.response.data.detail as string);
+        setInviteError(err.response.data?.detail ?? "Invalid email address.");
       } else {
         toast.error("Failed to send invite.");
       }
@@ -254,7 +254,7 @@ export function FamilyDetail() {
           {/* Pending invites list */}
           {invites.data && invites.data.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-gray-900 mb-3">Pending Invites</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-3">Invites</h2>
               <ul className="divide-y divide-gray-200 rounded-lg bg-white shadow">
                 {invites.data.map((invite) => (
                   <li key={invite.id} className="flex items-center justify-between px-4 py-3">
