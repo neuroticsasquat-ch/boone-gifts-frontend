@@ -29,7 +29,21 @@ describe("FamilyLists", () => {
 
     renderFamilyLists();
 
+    expect(screen.getByRole("heading", { name: /family lists/i })).toBeInTheDocument();
     expect(document.querySelector(".animate-spin")).toBeInTheDocument();
+  });
+
+  it("renders error message when API returns 500", async () => {
+    server.use(
+      http.get(`${API}/lists`, () => HttpResponse.json({}, { status: 500 })),
+    );
+
+    renderFamilyLists();
+
+    await waitFor(() => {
+      expect(screen.getByText(/failed to load family lists/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole("heading", { name: /family lists/i })).toBeInTheDocument();
   });
 
   it("renders empty message when API returns no lists", async () => {
@@ -79,8 +93,12 @@ describe("FamilyLists", () => {
     await waitFor(() => {
       expect(screen.getByText("Smith Family")).toBeInTheDocument();
     });
-    expect(screen.getByText("Alice Wishlist — from Alice — 2 of 5 claimed")).toBeInTheDocument();
-    expect(screen.getByText("Bob Wishlist — from Bob — 1 of 3 claimed")).toBeInTheDocument();
+    expect(screen.getByText("Alice Wishlist")).toBeInTheDocument();
+    expect(screen.getByText("from Alice")).toBeInTheDocument();
+    expect(screen.getByText("2 of 5 claimed")).toBeInTheDocument();
+    expect(screen.getByText("Bob Wishlist")).toBeInTheDocument();
+    expect(screen.getByText("from Bob")).toBeInTheDocument();
+    expect(screen.getByText("1 of 3 claimed")).toBeInTheDocument();
   });
 
   it("shows a multi-family list under both family headings", async () => {
@@ -110,7 +128,7 @@ describe("FamilyLists", () => {
       expect(screen.getByText("Smith Family")).toBeInTheDocument();
     });
     expect(screen.getByText("Jones Family")).toBeInTheDocument();
-    expect(screen.getAllByText("Shared List — from Carol — 0 of 4 claimed")).toHaveLength(2);
+    expect(screen.getAllByText("Shared List")).toHaveLength(2);
   });
 
   it("renders row links pointing to /lists/:id", async () => {
@@ -134,9 +152,9 @@ describe("FamilyLists", () => {
     renderFamilyLists();
 
     await waitFor(() => {
-      expect(screen.getByText("My Gift List — from Dan — 3 of 6 claimed")).toBeInTheDocument();
+      expect(screen.getByText("My Gift List")).toBeInTheDocument();
     });
-    const link = screen.getByRole("link", { name: "My Gift List — from Dan — 3 of 6 claimed" });
+    const link = screen.getByRole("link", { name: /my gift list/i });
     expect(link).toHaveAttribute("href", "/lists/7");
   });
 });

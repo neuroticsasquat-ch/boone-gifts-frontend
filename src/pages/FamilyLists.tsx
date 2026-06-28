@@ -27,7 +27,12 @@ export function FamilyLists() {
     return Array.from(map.values());
   }, [data]);
 
-  if (isPending) return <Spinner />;
+  if (isPending) return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-gray-900">Family Lists</h1>
+      <Spinner />
+    </div>
+  );
 
   if (isError) return (
     <div className="space-y-4">
@@ -54,8 +59,12 @@ export function FamilyLists() {
           <ul className="mt-3 divide-y divide-gray-200 rounded-lg bg-white shadow">
             {lists.map((list) => (
               <li key={list.id}>
-                <Link to={`/lists/${list.id}`} className="block px-4 py-3 hover:bg-gray-50">
-                  {list.name} — from {list.owner_name} — {list.claimed_count} of {list.gift_count} claimed
+                <Link to={`/lists/${list.id}`} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium text-gray-900">{list.name}</p>
+                    <p className="text-sm text-gray-500">from {list.owner_name}</p>
+                    <p className="text-xs text-gray-400">{list.claimed_count} of {list.gift_count} claimed</p>
+                  </div>
                 </Link>
               </li>
             ))}
