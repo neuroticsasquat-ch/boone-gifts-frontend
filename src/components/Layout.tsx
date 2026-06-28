@@ -5,6 +5,7 @@ import { useAuth } from "../hooks/useAuth";
 import { GiftIcon } from "./Icons";
 import { getConnectionRequests } from "../api/connections";
 import { getUnseenShareCount } from "../api/lists";
+import { getIncomingFamilyInvites } from "../api/families";
 import { Badge } from "./Badge";
 
 function HomeIcon({ className }: { className?: string }) {
@@ -71,9 +72,11 @@ export function Layout() {
 
   const requests = useQuery({ queryKey: ["connectionRequests"], queryFn: getConnectionRequests });
   const unseenShares = useQuery({ queryKey: ["unseen-shares"], queryFn: getUnseenShareCount });
+  const familyInvites = useQuery({ queryKey: ["familyInvites"], queryFn: getIncomingFamilyInvites });
 
   const requestCount = requests.data?.length ?? 0;
   const unseenCount = unseenShares.data ?? 0;
+  const familyInviteCount = familyInvites.data?.length ?? 0;
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -108,6 +111,14 @@ export function Layout() {
               {requestCount > 0 && (
                 <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
                   {requestCount > 9 ? "9+" : requestCount}
+                </span>
+              )}
+            </Link>
+            <Link to="/families" className="hidden md:inline relative text-gray-600 hover:text-gray-900">
+              Families
+              {familyInviteCount > 0 && (
+                <span className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                  {familyInviteCount > 9 ? "9+" : familyInviteCount}
                 </span>
               )}
             </Link>
@@ -174,6 +185,7 @@ export function Layout() {
             let badgeCount = 0;
             if (to === "/connections") badgeCount = requestCount;
             if (to === "/lists") badgeCount = unseenCount;
+            if (to === "/families") badgeCount = familyInviteCount;
             return (
               <Link
                 key={to}

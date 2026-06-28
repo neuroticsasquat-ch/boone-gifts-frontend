@@ -103,4 +103,44 @@ describe("Layout", () => {
     await screen.findByText("Boone Gifts");
     expect(screen.getByText("Boone Gifts")).toBeInTheDocument();
   });
+
+  it("shows family invite badge on Families tab in bottom nav when invites are pending", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () =>
+        HttpResponse.json([{ token: "tok1", family_name: "Smith Family", invited_by: "alice@test.com" }])
+      ),
+    );
+    renderLayout();
+    await screen.findByLabelText("Account menu");
+    await waitFor(() => {
+      // Badge with count 1 should appear (at least one badge span with "1")
+      expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("hides family invite badge on Families tab when no invites are pending", async () => {
+    // Default handler returns [] — badge must not appear
+    renderLayout();
+    await screen.findByLabelText("Account menu");
+    // Wait for queries to settle then verify no badge with count appears near Families
+    await waitFor(() => {
+      expect(screen.queryByText("1")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows family invite badge on Families link in top nav when invites are pending", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () =>
+        HttpResponse.json([{ token: "tok1", family_name: "Smith Family", invited_by: "alice@test.com" }])
+      ),
+    );
+    renderLayout();
+    await screen.findByLabelText("Account menu");
+    await waitFor(() => {
+      // The top nav Families link has an inline badge span
+      const topNav = document.querySelector("nav");
+      expect(topNav).toHaveTextContent("Families");
+      expect(topNav).toHaveTextContent("1");
+    });
+  });
 });
