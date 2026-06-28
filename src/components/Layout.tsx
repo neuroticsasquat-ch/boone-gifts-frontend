@@ -47,10 +47,19 @@ function UserIcon({ className }: { className?: string }) {
   );
 }
 
+function FamiliesIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h12a1 1 0 001-1v-6a1 1 0 00-1-1h-2M9 7h6m-3 6v4" />
+    </svg>
+  );
+}
+
 const TABS = [
   { to: "/", label: "Home", Icon: HomeIcon, match: (p: string) => p === "/" },
   { to: "/lists", label: "Lists", Icon: ListIcon, match: (p: string) => p.startsWith("/lists") },
   { to: "/connections", label: "Connect", Icon: PeopleIcon, match: (p: string) => p.startsWith("/connections") },
+  { to: "/families", label: "Families", Icon: FamiliesIcon, match: (p: string) => p.startsWith("/families") },
   { to: "/collections", label: "Collect", Icon: FolderIcon, match: (p: string) => p.startsWith("/collections") },
 ];
 
