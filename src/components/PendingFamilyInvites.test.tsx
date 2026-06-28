@@ -2,6 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "react-hot-toast";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/mocks/server";
 import { PendingFamilyInvites } from "./PendingFamilyInvites";
@@ -24,6 +25,7 @@ function renderComponent() {
   });
   return { queryClient, ...render(
     <QueryClientProvider client={queryClient}>
+      <Toaster />
       <PendingFamilyInvites />
     </QueryClientProvider>
   )};
@@ -122,6 +124,56 @@ describe("PendingFamilyInvites", () => {
       );
       expect(keys).toContainEqual(["familyInvites"]);
     });
+    expect((await screen.findAllByText(/no longer valid/i)).length).toBeGreaterThan(0);
+  });
+
+  it("invalidates familyInvites and shows stale-invite toast on 409 decline", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/decline`, () =>
+        new HttpResponse(null, { status: 409 })
+      ),
+    );
+
+    const { queryClient } = renderComponent();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const declineBtn = await screen.findByText("Decline");
+    await userEvent.click(declineBtn);
+
+    await waitFor(() => {
+      const keys = invalidateSpy.mock.calls.map(
+        (c) => (c[0] as { queryKey: unknown }).queryKey
+      );
+      expect(keys).toContainEqual(["familyInvites"]);
+    });
+    expect((await screen.findAllByText(/no longer valid/i)).length).toBeGreaterThan(0);
+  });
+
+  it("shows generic error toast on 403 accept", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/accept`, () =>
+        new HttpResponse(null, { status: 403 })
+      ),
+    );
+
+    renderComponent();
+    await userEvent.click(await screen.findByText("Accept"));
+    expect((await screen.findAllByText("Failed to accept invite.")).length).toBeGreaterThan(0);
+  });
+
+  it("shows generic error toast on 404 decline", async () => {
+    server.use(
+      http.get(`${API}/families/invites`, () => HttpResponse.json([testInvite])),
+      http.post(`${API}/families/invites/:token/decline`, () =>
+        new HttpResponse(null, { status: 404 })
+      ),
+    );
+
+    renderComponent();
+    await userEvent.click(await screen.findByText("Decline"));
+    expect((await screen.findAllByText("Failed to decline invite.")).length).toBeGreaterThan(0);
   });
 
   it("invalidates familyInvites, families, and lists/family queries on accept", async () => {

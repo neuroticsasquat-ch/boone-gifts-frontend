@@ -129,9 +129,12 @@ describe("Layout", () => {
     // Default handler returns [] — badge must not appear
     renderLayout();
     await screen.findByLabelText("Account menu");
-    // Wait for queries to settle then verify no badge with count appears near Families
+    // Wait for queries to settle then verify no badge with count appears in either nav
     await waitFor(() => {
-      expect(screen.queryByText("1")).not.toBeInTheDocument();
+      const topNav = screen.getByRole("navigation", { name: "Primary navigation" });
+      const bottomNav = screen.getByRole("navigation", { name: "Mobile navigation" });
+      expect(within(topNav).queryByText("1")).not.toBeInTheDocument();
+      expect(within(bottomNav).queryByText("1")).not.toBeInTheDocument();
     });
   });
 
