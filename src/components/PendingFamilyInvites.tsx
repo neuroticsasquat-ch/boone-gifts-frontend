@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import {
@@ -9,10 +10,14 @@ import {
 export function PendingFamilyInvites() {
   const queryClient = useQueryClient();
 
-  const { data } = useQuery({
+  const { data, isError } = useQuery({
     queryKey: ["familyInvites"],
     queryFn: getIncomingFamilyInvites,
   });
+
+  useEffect(() => {
+    if (isError) toast.error("Failed to load family invites.");
+  }, [isError]);
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["familyInvites"] });
@@ -34,6 +39,8 @@ export function PendingFamilyInvites() {
 
   if (!data || data.length === 0) return null;
 
+  const isAnyPending = acceptMutation.isPending || declineMutation.isPending;
+
   return (
     <section>
       <h2 className="text-lg font-semibold text-gray-900">Pending Family Invites</h2>
@@ -47,14 +54,14 @@ export function PendingFamilyInvites() {
             <div className="flex gap-2">
               <button
                 onClick={() => acceptMutation.mutate(invite.token)}
-                disabled={acceptMutation.isPending}
+                disabled={isAnyPending}
                 className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
               >
                 Accept
               </button>
               <button
                 onClick={() => declineMutation.mutate(invite.token)}
-                disabled={declineMutation.isPending}
+                disabled={isAnyPending}
                 className="rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-300 disabled:opacity-50"
               >
                 Decline

@@ -107,7 +107,13 @@ describe("Layout", () => {
   it("shows family invite badge on Families tab in bottom nav when invites are pending", async () => {
     server.use(
       http.get(`${API}/families/invites`, () =>
-        HttpResponse.json([{ token: "tok1", family_name: "Smith Family", invited_by: "alice@test.com" }])
+        HttpResponse.json([{
+          id: 1, token: "tok-abc", role: "member",
+          family: { id: 10, name: "Smith Family" },
+          invited_by: { id: 20, name: "Alice" },
+          expires_at: "2026-07-05T00:00:00Z",
+          created_at: "2026-06-28T00:00:00Z",
+        }])
       ),
     );
     renderLayout();
@@ -132,7 +138,13 @@ describe("Layout", () => {
   it("shows family invite badge on Families link in top nav when invites are pending", async () => {
     server.use(
       http.get(`${API}/families/invites`, () =>
-        HttpResponse.json([{ token: "tok1", family_name: "Smith Family", invited_by: "alice@test.com" }])
+        HttpResponse.json([{
+          id: 1, token: "tok-abc", role: "member",
+          family: { id: 10, name: "Smith Family" },
+          invited_by: { id: 20, name: "Alice" },
+          expires_at: "2026-07-05T00:00:00Z",
+          created_at: "2026-06-28T00:00:00Z",
+        }])
       ),
     );
     renderLayout();
