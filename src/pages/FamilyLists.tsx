@@ -9,7 +9,7 @@ import type { GiftList, FamilyRef } from "../types";
 export function FamilyLists() {
   useTitle("Family Lists");
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError } = useQuery({
     queryKey: ["lists", "family"],
     queryFn: () => getLists("family"),
   });
@@ -28,6 +28,13 @@ export function FamilyLists() {
   }, [data]);
 
   if (isPending) return <Spinner />;
+
+  if (isError) return (
+    <div className="space-y-4">
+      <h1 className="text-2xl font-bold text-gray-900">Family Lists</h1>
+      <p className="text-red-600">Failed to load family lists.</p>
+    </div>
+  );
 
   if (groups.length === 0) {
     return (
