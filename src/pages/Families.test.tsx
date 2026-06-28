@@ -124,6 +124,18 @@ describe("Families", () => {
     });
   });
 
+  it("shows error message when loading families fails", async () => {
+    server.use(
+      http.get(`${API}/families`, () => HttpResponse.json({ detail: "Server error" }, { status: 500 })),
+    );
+
+    renderFamilies();
+
+    await waitFor(() => {
+      expect(screen.getByText("Failed to load families.")).toBeInTheDocument();
+    });
+  });
+
   it("shows singular 'member' for a family with 1 member", async () => {
     server.use(
       http.get(`${API}/families`, () =>

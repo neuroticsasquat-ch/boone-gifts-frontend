@@ -37,6 +37,13 @@ export function Families() {
     </div>
   );
 
+  if (families.isError) return (
+    <div className="space-y-8">
+      <h1 className="text-2xl font-bold text-gray-900">Families</h1>
+      <p className="text-red-600">Failed to load families.</p>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Families</h1>
