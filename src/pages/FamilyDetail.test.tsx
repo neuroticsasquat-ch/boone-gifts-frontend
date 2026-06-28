@@ -125,9 +125,10 @@ describe("FamilyDetail", () => {
     await userEvent.type(input, "The Boone Family");
     await userEvent.click(screen.getByText("Rename"));
 
-    // No error should appear
+    // Success: no error and input cleared
     await waitFor(() => {
       expect(screen.queryByText("Failed to rename family.")).not.toBeInTheDocument();
+      expect(input).toHaveValue("");
     });
   });
 
@@ -256,9 +257,17 @@ describe("FamilyDetail", () => {
     });
   });
 
-  it("409 on promote shows last-organizer error message", async () => {
+  it("409 on demote shows last-organizer error message", async () => {
+    const twoOrganizers = {
+      ...sampleFamily,
+      members: [
+        { user_id: 1, name: "Alice", role: "organizer" },
+        { user_id: 2, name: "Bob", role: "organizer" },
+      ],
+    };
+
     server.use(
-      http.get(`${API}/families/1`, () => HttpResponse.json(sampleFamily)),
+      http.get(`${API}/families/1`, () => HttpResponse.json(twoOrganizers)),
       http.put(`${API}/families/1/members/2/role`, () =>
         HttpResponse.json({ detail: "Cannot remove last organizer" }, { status: 409 })
       ),
@@ -270,8 +279,8 @@ describe("FamilyDetail", () => {
       expect(screen.getByText("The Boones")).toBeInTheDocument();
     });
 
-    // Bob is a member; "Make Organizer" promotes him
-    await userEvent.click(screen.getByText("Make Organizer"));
+    // Bob is an organizer; "Make Member" demotes him → 409
+    await userEvent.click(screen.getByText("Make Member"));
 
     await waitFor(() => {
       expect(
