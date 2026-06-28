@@ -225,6 +225,37 @@ describe("FamilyDetail", () => {
     });
   });
 
+  it("demote: clicking Make Member sends role: member to PUT /families/:id/members/:userId/role", async () => {
+    const twoOrganizers = {
+      ...sampleFamily,
+      members: [
+        { user_id: 1, name: "Alice", role: "organizer" },
+        { user_id: 2, name: "Bob", role: "organizer" },
+      ],
+    };
+
+    let capturedBody: unknown;
+    server.use(
+      http.get(`${API}/families/1`, () => HttpResponse.json(twoOrganizers)),
+      http.put(`${API}/families/1/members/2/role`, async ({ request }) => {
+        capturedBody = await request.json();
+        return HttpResponse.json({ ...twoOrganizers.members[1], role: "member" });
+      }),
+    );
+
+    renderFamilyDetail(organizerToken);
+
+    await waitFor(() => {
+      expect(screen.getByText("The Boones")).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText("Make Member"));
+
+    await waitFor(() => {
+      expect(capturedBody).toEqual({ role: "member" });
+    });
+  });
+
   it("409 on promote shows last-organizer error message", async () => {
     server.use(
       http.get(`${API}/families/1`, () => HttpResponse.json(sampleFamily)),

@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useTitle } from "../hooks/useTitle";
 import { Spinner } from "../components/Spinner";
 import toast from "react-hot-toast";
-import type { AxiosError } from "axios";
+import { isAxiosError } from "axios";
 
 export function FamilyDetail() {
   const { id } = useParams();
@@ -23,7 +23,7 @@ export function FamilyDetail() {
   const family = useQuery({
     queryKey: ["family", familyId],
     queryFn: () => getFamily(familyId),
-    enabled: !!id,
+    enabled: Number.isFinite(familyId),
   });
 
   useTitle(family.data?.name ?? "Family");
@@ -72,8 +72,8 @@ export function FamilyDetail() {
       }
       setActionError(null);
     },
-    onError: (err: AxiosError) => {
-      if (err.response?.status === 409) {
+    onError: (err: unknown) => {
+      if (isAxiosError(err) && err.response?.status === 409) {
         setActionError("Promote another organizer first, or delete the family.");
       } else {
         toast.error("Action failed.");
@@ -88,8 +88,8 @@ export function FamilyDetail() {
       invalidate();
       setActionError(null);
     },
-    onError: (err: AxiosError) => {
-      if (err.response?.status === 409) {
+    onError: (err: unknown) => {
+      if (isAxiosError(err) && err.response?.status === 409) {
         setActionError("Promote another organizer first, or delete the family.");
       } else {
         toast.error("Action failed.");

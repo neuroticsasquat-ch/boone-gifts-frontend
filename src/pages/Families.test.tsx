@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/mocks/server";
 import { Families } from "./Families";
+import toast from "react-hot-toast";
 
 const API = "https://boone-gifts-api.localhost";
 
@@ -26,6 +27,8 @@ function renderFamilies() {
 }
 
 describe("Families", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("renders list of families with name, role, and member count", async () => {
     server.use(
       http.get(`${API}/families`, () =>
@@ -97,6 +100,27 @@ describe("Families", () => {
 
     await waitFor(() => {
       expect(screen.getByText("No families yet. Create one above.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows error toast when creating a family fails", async () => {
+    const toastError = vi.spyOn(toast, "error").mockImplementation(() => "");
+    server.use(
+      http.get(`${API}/families`, () => HttpResponse.json([])),
+      http.post(`${API}/families`, () => HttpResponse.json({ detail: "Server error" }, { status: 500 })),
+    );
+
+    renderFamilies();
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Family name")).toBeInTheDocument();
+    });
+
+    await userEvent.type(screen.getByPlaceholderText("Family name"), "New Family");
+    await userEvent.click(screen.getByText("Create"));
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("Failed to create family.");
     });
   });
 
