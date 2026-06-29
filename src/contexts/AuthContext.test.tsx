@@ -13,6 +13,17 @@ function SimpleModeConsumer() {
   return <div data-testid="simple-mode">{user ? String(user.simple_mode) : "none"}</div>;
 }
 
+function ToggleConsumer() {
+  const { user, isLoading, toggleSimpleMode } = useAuth();
+  if (isLoading) return <div>Loading...</div>;
+  return (
+    <div>
+      <div data-testid="simple-mode">{user ? String(user.simple_mode) : "none"}</div>
+      <button onClick={() => toggleSimpleMode()}>Toggle</button>
+    </div>
+  );
+}
+
 // Helper component that exposes auth state for testing
 function AuthConsumer() {
   const { user, login, logout, register, isLoading } = useAuth();
@@ -186,6 +197,49 @@ describe("AuthContext", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("user")).toHaveTextContent("test@test.com");
+    });
+  });
+
+  it("toggleSimpleMode calls PUT /auth/profile and updates user.simple_mode", async () => {
+    // Token with simple_mode: false — starts in full mode
+    const fullToken = [
+      btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+      btoa(JSON.stringify({ sub: "1", email: "test@test.com", role: "member", simple_mode: false, exp: 9999999999 })),
+      "fake-signature",
+    ].join(".");
+
+    // Token the server returns after toggling ON
+    const simpleToken = [
+      btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+      btoa(JSON.stringify({ sub: "1", email: "test@test.com", role: "member", simple_mode: true, exp: 9999999999 })),
+      "fake-signature",
+    ].join(".");
+
+    server.use(
+      http.post("https://boone-gifts-api.localhost/auth/refresh", () =>
+        HttpResponse.json({ access_token: fullToken, token_type: "bearer" })
+      ),
+      http.put("https://boone-gifts-api.localhost/auth/profile", () =>
+        HttpResponse.json({ access_token: simpleToken, token_type: "bearer" })
+      )
+    );
+
+    render(
+      <AuthProvider>
+        <ToggleConsumer />
+      </AuthProvider>
+    );
+
+    // Wait for session to restore (simple_mode: false)
+    await waitFor(() => {
+      expect(screen.getByTestId("simple-mode")).toHaveTextContent("false");
+    });
+
+    await userEvent.click(screen.getByText("Toggle"));
+
+    // After toggle, user.simple_mode should be true (from the new token)
+    await waitFor(() => {
+      expect(screen.getByTestId("simple-mode")).toHaveTextContent("true");
     });
   });
 });
