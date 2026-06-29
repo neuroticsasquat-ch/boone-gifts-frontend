@@ -30,6 +30,7 @@ function decodePayload(token: string): AuthUser {
     email: payload.email,
     name: payload.name ?? "",
     role: payload.role,
+    simple_mode: payload.simple_mode ?? false,
   };
 }
 
