@@ -107,4 +107,34 @@ describe("Account", () => {
       expect(screen.getByText(/current password is incorrect/i)).toBeInTheDocument();
     });
   });
+
+  it("renders View mode card with correct copy for full-mode user", () => {
+    renderAccount({ user: { id: 1, email: "user@test.com", name: "Test User", role: "member", simple_mode: false } });
+    expect(screen.getByText("View mode")).toBeInTheDocument();
+    expect(screen.getByText(/full mode is on/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch to simple mode/i })).toBeInTheDocument();
+  });
+
+  it("renders View mode card with correct copy for simple-mode user", () => {
+    renderAccount({ user: { id: 1, email: "user@test.com", name: "Test User", role: "member", simple_mode: true } });
+    expect(screen.getByText(/simple mode is on/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch to full mode/i })).toBeInTheDocument();
+  });
+
+  it("calls toggleSimpleMode on button click and shows loading state", async () => {
+    let resolve!: () => void;
+    const toggleSimpleMode = vi.fn().mockReturnValue(new Promise<void>((r) => { resolve = r; }));
+    renderAccount({ toggleSimpleMode });
+
+    await userEvent.click(screen.getByRole("button", { name: /switch to simple mode/i }));
+
+    // Loading state while the promise is pending
+    expect(screen.getByRole("button", { name: /saving/i })).toBeDisabled();
+
+    resolve();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /switch to simple mode/i })).not.toBeDisabled();
+    });
+    expect(toggleSimpleMode).toHaveBeenCalledOnce();
+  });
 });
