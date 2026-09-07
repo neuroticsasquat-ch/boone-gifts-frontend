@@ -140,7 +140,8 @@ in NEU-1231) and once in `PendingFamilyInvites.tsx` (replaced by this).
 
 - Mounted on `/lists` above the lists, on `/people`, and on the unrouted `Families` page.
 - Renders **nothing** when nothing is pending — no empty card, no heading.
-- One in-flight action disables every row, so a decision cannot be taken twice.
+- While an item's accept/decline is in flight, both of that item's buttons are disabled, so a
+  decision cannot be taken twice. Other rows stay actionable.
 - A 409 on a family invite means it was already accepted, declined, or expired: the row is refreshed
   away and the user is told the invite is no longer valid.
 
@@ -157,7 +158,7 @@ Family visibility is an explicit per-(list, family) grant on the backend, not im
 A list can name a recipient. `RecipientFields.tsx` is the shared "this list is for someone else" control (create form and edit header); `lib/recipient.ts` holds its value type and payload mapping, `lib/attribution.ts` turns a list into its display line, and `ListAttribution.tsx` renders it — "from Jane" for a list someone shared, "for Beth · kept by Tom" for one kept on behalf of a person with no account.
 
 ## Testing
-- ~230 test cases across 26 files, run inside the container via `task test`
+- ~233 test cases across 26 files, run inside the container via `task test`
 - MSW mocks live in `src/test/mocks/handlers.ts` (default `/auth/refresh → 401`); setup in `src/test/setup.ts`
 
 ## Critical conventions

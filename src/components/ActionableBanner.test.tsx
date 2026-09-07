@@ -356,6 +356,7 @@ describe("ActionableBanner", () => {
       expect(keys).toContainEqual(["connectionRequests"]);
       expect(keys).toContainEqual(["connections"]);
       expect(keys).toContainEqual(["lists", "shared"]);
+      expect(keys).toContainEqual(["occasions"]);
     });
   });
 

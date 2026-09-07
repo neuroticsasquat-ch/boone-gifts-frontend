@@ -31,13 +31,18 @@ export function ActionableBanner() {
     if (loadFailed) toast.error("Failed to load pending requests and invites.");
   }, [loadFailed]);
 
-  // Accepting either kind changes who can share with the user, so the badge
-  // queries Layout runs and the shared-list scope both go stale.
-  const invalidateConnections = () => {
+  // Accepting a request adds a connection, so what that person shares becomes
+  // visible: the badge query, the connection list and the shared scope all go stale.
+  const invalidateAcceptedConnection = () => {
     queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
     queryClient.invalidateQueries({ queryKey: ["connections"] });
     queryClient.invalidateQueries({ queryKey: ["lists", "shared"] });
     queryClient.invalidateQueries({ queryKey: ["occasions"] });
+  };
+
+  // Declining adds nothing — only the pending list (and so the badge) changes.
+  const invalidateDeclinedConnection = () => {
+    queryClient.invalidateQueries({ queryKey: ["connectionRequests"] });
   };
 
   const invalidateInvites = () => {
@@ -59,13 +64,13 @@ export function ActionableBanner() {
 
   const acceptRequest = useMutation({
     mutationFn: acceptConnection,
-    onSuccess: invalidateConnections,
+    onSuccess: invalidateAcceptedConnection,
     onError: () => toast.error("Failed to accept request."),
   });
 
   const declineRequest = useMutation({
     mutationFn: deleteConnection,
-    onSuccess: invalidateConnections,
+    onSuccess: invalidateDeclinedConnection,
     onError: () => toast.error("Failed to decline request."),
   });
 
@@ -81,14 +86,19 @@ export function ActionableBanner() {
     onError: (err) => handleInviteError(err, "decline"),
   });
 
-  // One in-flight action disables every row: the items interact (accepting a
-  // family invite can resolve a share the next row is about) and a decision
-  // taken twice is worse than one taken slowly.
-  const isAnyPending =
-    acceptRequest.isPending ||
-    declineRequest.isPending ||
-    acceptInvite.isPending ||
-    declineInvite.isPending;
+  // Only the row being acted on is disabled, and both of its buttons are: the
+  // guard is against answering one item twice, not against answering a second
+  // item while the first is in flight.
+  const busyRequestId = acceptRequest.isPending
+    ? acceptRequest.variables
+    : declineRequest.isPending
+      ? declineRequest.variables
+      : null;
+  const busyInviteToken = acceptInvite.isPending
+    ? acceptInvite.variables
+    : declineInvite.isPending
+      ? declineInvite.variables
+      : null;
 
   const pendingRequests = requests.data ?? [];
   const pendingInvites = invites.data ?? [];
@@ -108,7 +118,7 @@ export function ActionableBanner() {
             <ActionButtons
               onAccept={() => acceptRequest.mutate(req.id)}
               onDecline={() => declineRequest.mutate(req.id)}
-              disabled={isAnyPending}
+              disabled={busyRequestId === req.id}
               describes={`connection request from ${req.user.name}`}
             />
           </li>
@@ -124,7 +134,7 @@ export function ActionableBanner() {
             <ActionButtons
               onAccept={() => acceptInvite.mutate(invite.token)}
               onDecline={() => declineInvite.mutate(invite.token)}
-              disabled={isAnyPending}
+              disabled={busyInviteToken === invite.token}
               describes={`invite to ${invite.family.name}`}
             />
           </li>

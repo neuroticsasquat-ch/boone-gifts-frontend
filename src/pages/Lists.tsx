@@ -37,7 +37,6 @@ export function Lists() {
 
   if (ownedLists.isPending || sharedLists.isPending) return (
     <div className="space-y-8">
-      <ActionableBanner />
       <h1 className="text-2xl font-bold text-gray-900">My Lists</h1>
       <Spinner />
     </div>
