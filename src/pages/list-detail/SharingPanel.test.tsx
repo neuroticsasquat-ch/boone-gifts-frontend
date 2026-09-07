@@ -140,6 +140,31 @@ describe("SharingPanel — people", () => {
     await waitFor(() => expect(revoked).toHaveBeenCalled());
   });
 
+  it("keeps a revokable row for a share held by someone no longer connected", async () => {
+    // The header summary still reads "Shared with User 42", and this panel is
+    // the only place to switch that off — so it has to offer the row.
+    const revoked = vi.fn();
+    server.use(
+      http.get(`${API}/connections`, () => HttpResponse.json([])),
+      http.get(`${API}/lists/1/shares`, () =>
+        HttpResponse.json([{ id: 1, list_id: 1, user_id: 42, created_at: "2026-01-01" }])
+      ),
+      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
+      http.delete(`${API}/lists/1/shares/42`, () => {
+        revoked();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderPanel();
+
+    const row = await screen.findByRole("checkbox", { name: /share with user 42/i });
+    expect(row).toBeChecked();
+
+    await userEvent.click(row);
+    await waitFor(() => expect(revoked).toHaveBeenCalled());
+  });
+
   it("says so when there are no connections, and points at People", async () => {
     server.use(
       http.get(`${API}/connections`, () => HttpResponse.json([])),

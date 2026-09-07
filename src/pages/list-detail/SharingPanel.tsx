@@ -130,8 +130,22 @@ function PeopleGroup({ listId, queryClient }: { listId: number; queryClient: Que
     );
   }
 
-  const data = connections.data ?? [];
-  if (data.length === 0) {
+  const connectionList = connections.data ?? [];
+  const shareList = shares.data ?? [];
+  const connected = new Set(connectionList.map((c) => c.user.id));
+
+  // Every connection, plus anyone still holding a share who is no longer a
+  // connection. Without that second half such a grant would be readable in the
+  // header summary — which falls back to the same "User 42" — while this panel,
+  // the only revoke surface there is, offered no row to switch it off.
+  const rows = [
+    ...connectionList.map((c) => ({ userId: c.user.id, name: c.user.name, detail: c.user.email })),
+    ...shareList
+      .filter((s) => !connected.has(s.user_id))
+      .map((s) => ({ userId: s.user_id, name: `User ${s.user_id}`, detail: undefined })),
+  ];
+
+  if (rows.length === 0) {
     return (
       <Group title="People">
         <Hint>
@@ -142,25 +156,23 @@ function PeopleGroup({ listId, queryClient }: { listId: number; queryClient: Que
     );
   }
 
-  const sharedUserIds = new Set((shares.data ?? []).map((s) => s.user_id));
+  const sharedUserIds = new Set(shareList.map((s) => s.user_id));
   const pending = shareMutation.isPending || unshareMutation.isPending;
 
   return (
     <Group title="People">
       <ul className="divide-y divide-gray-200 rounded-lg bg-white shadow">
-        {data.map((connection) => {
-          const shared = sharedUserIds.has(connection.user.id);
+        {rows.map((row) => {
+          const shared = sharedUserIds.has(row.userId);
           return (
             <ShareRow
-              key={connection.user.id}
-              name={connection.user.name}
-              detail={connection.user.email}
+              key={row.userId}
+              name={row.name}
+              detail={row.detail}
               checked={shared}
               disabled={pending}
               onToggle={() =>
-                shared
-                  ? unshareMutation.mutate(connection.user.id)
-                  : shareMutation.mutate(connection.user.id)
+                shared ? unshareMutation.mutate(row.userId) : shareMutation.mutate(row.userId)
               }
             />
           );
