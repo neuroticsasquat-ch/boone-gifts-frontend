@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi } from "vitest";
 import { MemoryRouter } from "react-router";
@@ -6,49 +6,159 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "../../test/mocks/server";
 import { AuthProvider } from "../../contexts/AuthContext";
-import { FamiliesTab } from "./FamiliesTab";
+import { SharingPanel } from "./SharingPanel";
 
 const API = "https://boone-gifts-api.localhost";
 
-function token(claims: Record<string, unknown>) {
-  return [
-    btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
-    btoa(JSON.stringify({ sub: "1", email: "owner@test.com", role: "member", exp: 9999999999, ...claims })),
-    "fake-signature",
-  ].join(".");
-}
+const ownerToken = [
+  btoa(JSON.stringify({ alg: "HS256", typ: "JWT" })),
+  btoa(JSON.stringify({ sub: "1", email: "owner@test.com", role: "member", exp: 9999999999 })),
+  "fake-signature",
+].join(".");
 
-const fullModeToken = token({});
-const simpleModeToken = token({ simple_mode: true });
+const connections = [
+  {
+    id: 5,
+    status: "accepted",
+    user: { id: 2, name: "Alice", email: "alice@test.com" },
+    created_at: "2026-01-01",
+    accepted_at: "2026-01-02",
+  },
+  {
+    id: 6,
+    status: "accepted",
+    user: { id: 3, name: "Bob", email: "bob@test.com" },
+    created_at: "2026-01-01",
+    accepted_at: "2026-01-02",
+  },
+];
 
 const listFamilies = [
   { id: 7, name: "The Boones", shared: true },
   { id: 8, name: "The Smiths", shared: false },
 ];
 
-function renderTab(authToken: string) {
+/** Everything the panel reads, so a test only overrides what it cares about. */
+function serveSharingState({
+  shares = [] as { id: number; list_id: number; user_id: number; created_at: string }[],
+  families = listFamilies,
+} = {}) {
+  server.use(
+    http.get(`${API}/connections`, () => HttpResponse.json(connections)),
+    http.get(`${API}/lists/1/shares`, () => HttpResponse.json(shares)),
+    http.get(`${API}/lists/1/families`, () => HttpResponse.json(families)),
+  );
+}
+
+function renderPanel(onClose = vi.fn()) {
   server.use(
     http.post(`${API}/auth/refresh`, () =>
-      HttpResponse.json({ access_token: authToken, token_type: "bearer" })
+      HttpResponse.json({ access_token: ownerToken, token_type: "bearer" })
     ),
   );
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  render(
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <MemoryRouter>
-          <FamiliesTab listId={1} queryClient={queryClient} />
+          <SharingPanel listId={1} queryClient={queryClient} onClose={onClose} />
         </MemoryRouter>
       </AuthProvider>
     </QueryClientProvider>
   );
+  return { onClose };
 }
 
-describe("FamiliesTab — full mode", () => {
-  it("renders one toggle per family, reflecting its shared state", async () => {
-    server.use(http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)));
+describe("SharingPanel — one panel for people and families", () => {
+  it("puts both groups in a single panel, people first", async () => {
+    serveSharingState();
 
-    renderTab(fullModeToken);
+    renderPanel();
+
+    const panel = await screen.findByRole("region", { name: "Who can see this list" });
+    const headings = within(panel)
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    expect(headings).toEqual(["People", "Families"]);
+
+    expect(await within(panel).findByRole("checkbox", { name: /share with alice/i })).toBeInTheDocument();
+    expect(within(panel).getByRole("checkbox", { name: /share with the boones/i })).toBeInTheDocument();
+  });
+
+  it("closes on Done", async () => {
+    serveSharingState();
+
+    const { onClose } = renderPanel();
+
+    await userEvent.click(await screen.findByRole("button", { name: /done/i }));
+    expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("SharingPanel — people", () => {
+  it("checks the connections the list is already shared with", async () => {
+    serveSharingState({ shares: [{ id: 1, list_id: 1, user_id: 2, created_at: "2026-01-01" }] });
+
+    renderPanel();
+
+    expect(await screen.findByRole("checkbox", { name: /share with alice/i })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /share with bob/i })).not.toBeChecked();
+  });
+
+  it("checking a person POSTs the share", async () => {
+    const shared = vi.fn();
+    serveSharingState();
+    server.use(
+      http.post(`${API}/lists/1/shares`, async ({ request }) => {
+        shared(await request.json());
+        return HttpResponse.json(
+          { id: 1, list_id: 1, user_id: 3, created_at: "2026-01-01" },
+          { status: 201 },
+        );
+      }),
+    );
+
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: /share with bob/i }));
+    await waitFor(() => expect(shared).toHaveBeenCalledWith({ user_id: 3 }));
+  });
+
+  it("unchecking a person DELETEs the share", async () => {
+    const revoked = vi.fn();
+    serveSharingState({ shares: [{ id: 1, list_id: 1, user_id: 2, created_at: "2026-01-01" }] });
+    server.use(
+      http.delete(`${API}/lists/1/shares/2`, () => {
+        revoked();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: /share with alice/i }));
+    await waitFor(() => expect(revoked).toHaveBeenCalled());
+  });
+
+  it("says so when there are no connections, and points at People", async () => {
+    server.use(
+      http.get(`${API}/connections`, () => HttpResponse.json([])),
+      http.get(`${API}/lists/1/shares`, () => HttpResponse.json([])),
+      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
+    );
+
+    renderPanel();
+
+    expect(await screen.findByText(/don't have any connections/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /add a connection/i })).toHaveAttribute("href", "/people");
+  });
+});
+
+describe("SharingPanel — families", () => {
+  it("renders one toggle per family, reflecting its shared state", async () => {
+    serveSharingState();
+
+    renderPanel();
 
     expect(await screen.findByRole("checkbox", { name: /share with the boones/i })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /share with the smiths/i })).not.toBeChecked();
@@ -56,15 +166,15 @@ describe("FamiliesTab — full mode", () => {
 
   it("toggling a family on PUTs the grant", async () => {
     const shared = vi.fn();
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.put(`${API}/lists/1/families/8`, () => {
         shared();
         return new HttpResponse(null, { status: 204 });
       }),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the smiths/i }));
     await waitFor(() => expect(shared).toHaveBeenCalled());
@@ -72,15 +182,15 @@ describe("FamiliesTab — full mode", () => {
 
   it("toggling a family off DELETEs the grant with no claims param", async () => {
     const revoked = vi.fn();
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.delete(`${API}/lists/1/families/7`, ({ request }) => {
         revoked(new URL(request.url).searchParams.get("claims"));
         return new HttpResponse(null, { status: 204 });
       }),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the boones/i }));
     await waitFor(() => expect(revoked).toHaveBeenCalledWith(null));
@@ -88,8 +198,8 @@ describe("FamiliesTab — full mode", () => {
   });
 
   it("shows the release/keep dialog on a 409, with no counts or names", async () => {
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.delete(`${API}/lists/1/families/7`, () =>
         HttpResponse.json(
           { detail: "Some gifts on this list are claimed by members of this family." },
@@ -98,7 +208,7 @@ describe("FamiliesTab — full mode", () => {
       ),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the boones/i }));
 
@@ -113,8 +223,8 @@ describe("FamiliesTab — full mode", () => {
 
   it("re-issues the request with claims=release", async () => {
     const revoked = vi.fn();
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.delete(`${API}/lists/1/families/7`, ({ request }) => {
         const claims = new URL(request.url).searchParams.get("claims");
         revoked(claims);
@@ -124,7 +234,7 @@ describe("FamiliesTab — full mode", () => {
       }),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the boones/i }));
     await userEvent.click(await screen.findByRole("button", { name: /release those claims/i }));
@@ -135,8 +245,8 @@ describe("FamiliesTab — full mode", () => {
 
   it("re-issues the request with claims=keep", async () => {
     const revoked = vi.fn();
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.delete(`${API}/lists/1/families/7`, ({ request }) => {
         const claims = new URL(request.url).searchParams.get("claims");
         revoked(claims);
@@ -146,7 +256,7 @@ describe("FamiliesTab — full mode", () => {
       }),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the boones/i }));
     await userEvent.click(await screen.findByRole("button", { name: /keep them claimed/i }));
@@ -156,15 +266,15 @@ describe("FamiliesTab — full mode", () => {
 
   it("cancelling the dialog leaves the grant in place", async () => {
     const revoked = vi.fn();
+    serveSharingState();
     server.use(
-      http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)),
       http.delete(`${API}/lists/1/families/7`, ({ request }) => {
         revoked(new URL(request.url).searchParams.get("claims"));
         return HttpResponse.json({ detail: "claimed" }, { status: 409 });
       }),
     );
 
-    renderTab(fullModeToken);
+    renderPanel();
 
     await userEvent.click(await screen.findByRole("checkbox", { name: /share with the boones/i }));
     await userEvent.click(await screen.findByRole("button", { name: /cancel/i }));
@@ -173,29 +283,11 @@ describe("FamiliesTab — full mode", () => {
     expect(revoked).toHaveBeenCalledTimes(1);
     expect(screen.getByRole("checkbox", { name: /share with the boones/i })).toBeChecked();
   });
-});
 
-describe("FamiliesTab — simple mode", () => {
-  it("shows the real sharing state read-only, with the switch-to-full-mode instruction", async () => {
-    server.use(http.get(`${API}/lists/1/families`, () => HttpResponse.json(listFamilies)));
+  it("says so when the owner belongs to no families", async () => {
+    serveSharingState({ families: [] });
 
-    renderTab(simpleModeToken);
-
-    await screen.findByText("The Boones");
-    // The real state, not an assertion that everything is shared.
-    expect(screen.getByText("Shared")).toBeInTheDocument();
-    expect(screen.getByText("Not shared")).toBeInTheDocument();
-    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
-    expect(screen.getByText(/switch to full mode/i)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /account settings/i })).toHaveAttribute("href", "/account");
-  });
-});
-
-describe("FamiliesTab — no families", () => {
-  it("says so instead of rendering an empty list", async () => {
-    server.use(http.get(`${API}/lists/1/families`, () => HttpResponse.json([])));
-
-    renderTab(fullModeToken);
+    renderPanel();
 
     expect(await screen.findByText(/don't belong to any families/i)).toBeInTheDocument();
   });
