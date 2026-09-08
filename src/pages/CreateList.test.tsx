@@ -144,6 +144,10 @@ describe("CreateList — list recipients", () => {
     expect(screen.queryByRole("textbox", { name: /who is this list for/i }))
       .not.toBeInTheDocument();
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    // The warning is unconditional inside the disclosure (NEU-1241), so the
+    // closed checkbox is the only thing keeping it off an ordinary self-list.
+    expect(screen.queryByText(/can't claim anything on it yourself/i))
+      .not.toBeInTheDocument();
   });
 
   it("reveals the name field and the keeper's warning when checked", async () => {
@@ -312,6 +316,21 @@ describe("CreateList — who is this list for (shared account)", () => {
       account_person_id: null,
       recipient_name: null,
     });
+  });
+
+  it("shows the keeper's warning under 'Someone else' and nowhere else", async () => {
+    sharedAccountForm();
+
+    await userEvent.click(await screen.findByRole("radio", { name: "Gran" }));
+    expect(screen.queryByText(/can't claim anything on it yourself/i))
+      .not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: "Both of us" }));
+    expect(screen.queryByText(/can't claim anything on it yourself/i))
+      .not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: "Someone else" }));
+    expect(screen.getByText(/can't claim anything on it yourself/i)).toBeInTheDocument();
   });
 
   it("reveals the recipient fields under 'Someone else' and posts the name alone", async () => {

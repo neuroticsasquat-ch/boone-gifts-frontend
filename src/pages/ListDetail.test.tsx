@@ -703,6 +703,8 @@ describe("ListDetail — list recipients", () => {
     expect(disclosure).toBeChecked();
     expect(screen.getByRole("textbox", { name: /who is this list for/i }))
       .toHaveValue("Beth");
+    // Nothing left to answer beside the name (NEU-1241).
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
 
     await userEvent.click(disclosure);
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
