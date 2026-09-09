@@ -155,20 +155,30 @@ describe("FolderDetail", () => {
       http.get(`${API}/folders/1`, () => HttpResponse.json(sampleFolder)),
       http.get(`${API}/lists`, () => HttpResponse.json([])),
       http.get(`${API}/folders/1/shopping`, () =>
-        HttpResponse.json([
-          {
-            claim_id: 100,
-            gift_id: 1,
-            name: "Lego Set",
-            description: null,
-            url: null,
-            price: "49.99",
-            list_id: 10,
-            list_name: "My Wishlist",
-            purchased_at: null,
-            amount_paid: null,
+        HttpResponse.json({
+          budget: {
+            amount: null,
+            spent: "0.00",
+            remaining: null,
+            bought_count: 0,
+            total_count: 1,
+            unpriced_count: 0,
           },
-        ])
+          items: [
+            {
+              claim_id: 100,
+              gift_id: 1,
+              name: "Lego Set",
+              description: null,
+              url: null,
+              price: "49.99",
+              list_id: 10,
+              list_name: "My Wishlist",
+              purchased_at: null,
+              amount_paid: null,
+            },
+          ],
+        })
       ),
     );
 

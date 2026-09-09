@@ -6,6 +6,7 @@ import { getFolderShopping } from "../api/folders";
 import { getOccasionShopping } from "../api/occasions";
 import { purchaseGift, unpurchaseGift } from "../api/gifts";
 import { formatMoney } from "../lib/money";
+import { BudgetLine } from "./BudgetLine";
 import { Spinner } from "./Spinner";
 import type { ShoppingItem } from "../types";
 
@@ -48,8 +49,15 @@ export function MyShopping({ scope }: { scope: ShoppingScope }) {
   // A purchase ticked here is the same claim list detail renders, so its page
   // is refreshed too rather than left showing yesterday's answer.
   function handleChanged(listId: number) {
-    queryClient.invalidateQueries({ queryKey: ["shopping", scope.kind, scope.id] });
+    refreshShopping();
     queryClient.invalidateQueries({ queryKey: ["list", listId] });
+  }
+
+  // The budget rollup travels with the items, so one invalidation refreshes
+  // both. That is the point of the single payload: a budget line fetched apart
+  // from the claims can render a total the list beneath it contradicts.
+  function refreshShopping() {
+    queryClient.invalidateQueries({ queryKey: ["shopping", scope.kind, scope.id] });
   }
 
   if (shopping.isPending) return <Spinner />;
@@ -67,14 +75,16 @@ export function MyShopping({ scope }: { scope: ShoppingScope }) {
     );
   }
 
-  // The budget line belongs directly above the groups (project spec §9.2), and
-  // NEU-1276 is where it arrives. It is left as a gap in this stack rather than
-  // designed around: inserting one element at the top of a vertical stack costs
-  // nothing, while a layout built as though the groups were the whole tab would
-  // have to be reflowed to take it.
+  // The budget line sits directly above the groups (project spec §9.2), and it
+  // is rendered whether or not there is anything claimed yet: the tally
+  // describes the viewer's shopping either way, and a budget is something they
+  // may well want to set before they have bought anything.
+  const { budget, items } = shopping.data;
+
   return (
     <div className="space-y-4">
-      {shopping.data.length === 0 ? (
+      <BudgetLine budget={budget} scope={scope} onChanged={refreshShopping} />
+      {items.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow">
           <p className="text-gray-500">{EMPTY[scope.kind]}</p>
           <p className="mt-1 text-sm text-gray-400">
@@ -82,7 +92,7 @@ export function MyShopping({ scope }: { scope: ShoppingScope }) {
           </p>
         </div>
       ) : (
-        groupByList(shopping.data).map((group) => (
+        groupByList(items).map((group) => (
           <div key={group.listId} className="overflow-hidden rounded-lg bg-white shadow">
             <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
               <h3 className="text-sm font-semibold text-gray-700">{group.listName}</h3>
