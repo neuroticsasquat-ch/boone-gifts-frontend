@@ -148,6 +148,10 @@ function ShoppingRow({ item, onChanged }: { item: ShoppingItem; onChanged: () =>
   const [editing, setEditing] = useState(false);
   const [amount, setAmount] = useState("");
 
+  // Ticked as far as the control is concerned: a revealed prompt has already
+  // moved the box, and taking the tick back is what abandons it.
+  const isTicked = isPurchased || prompting;
+
   const purchaseMutation = useMutation({
     // `undefined` is Skip: the field goes unset and the server leaves any
     // amount already recorded alone. That is what makes unticking and
@@ -188,10 +192,16 @@ function ShoppingRow({ item, onChanged }: { item: ShoppingItem; onChanged: () =>
       setEditing(false);
       unpurchaseMutation.mutate();
     } else {
-      // Empty, always. The owner's asking price sits beside the field as a hint
-      // and never inside it — a budget pre-filled from someone else's wishlist
+      // Seeded from the claimer's **own** recorded amount and nothing else —
+      // which is empty on a claim they have never priced, and is what they last
+      // typed on one they unticked. Unticking deliberately leaves `amount_paid`
+      // standing so re-ticking need not retype it (project spec §10.4); seeding
+      // blank here would send an explicit null on Save and quietly destroy it.
+      //
+      // The owner's asking price is never what fills this field: it sits beside
+      // it as a hint, because a budget pre-filled from someone else's wishlist
       // price looks precise and is a guess (project spec §6.3).
-      setAmount("");
+      setAmount(item.amount_paid ?? "");
       setPrompting(true);
     }
   }
@@ -225,10 +235,10 @@ function ShoppingRow({ item, onChanged }: { item: ShoppingItem; onChanged: () =>
       <div className="flex items-start gap-3">
         <input
           type="checkbox"
-          checked={isPurchased || prompting}
+          checked={isTicked}
           onChange={handleToggle}
           disabled={isSaving}
-          aria-label={`Mark "${item.name}" as ${isPurchased ? "not bought" : "bought"}`}
+          aria-label={`Mark "${item.name}" as ${isTicked ? "not bought" : "bought"}`}
           className="mt-1 h-4 w-4 cursor-pointer rounded border-gray-300 text-blue-600 disabled:cursor-not-allowed"
         />
         <div className="min-w-0 flex-1">

@@ -291,12 +291,15 @@ claims are *filed under*, or a folder the claimed-from lists are *in*. Keyed `["
   is structural rather than a filter applied here (`CONTEXT.md` rule 2).
 - **Grouped on `list_id`, never on `list_name`** — two lists routinely share a name and grouping on
   it would silently merge them under one heading. Order comes from the backend and is stable.
-- **Two amount paths, deliberately not one.** Ticking an unbought claim reveals the same empty
-  prompt list detail's `PurchaseControl` does — Save and Skip commit, the asking price is a "listed
-  at $39" hint beside the field and never inside it. A claim that is *already* bought is corrected in
-  place instead: **Add amount** / **Edit** opens the field seeded from the claimer's own recorded
-  amount and saves through `PATCH /claims/{id}`. Saving it empty clears the amount; **Cancel** is the
-  way out without changing anything.
+- **Two amount paths, deliberately not one.** Ticking an unbought claim reveals the same prompt list
+  detail's `PurchaseControl` does — Save and Skip commit, the asking price is a "listed at $39" hint
+  beside the field and never inside it. A claim that is *already* bought is corrected in place
+  instead: **Add amount** / **Edit** opens the field and saves through `PATCH /claims/{id}`. Saving
+  it empty clears the amount; **Cancel** is the way out without changing anything.
+- **Both fields seed from the claimer's own `amount_paid` and from nothing else** — empty on a claim
+  never priced, and carrying the last answer on one that was unticked. Unticking leaves `amount_paid`
+  standing on the server so re-ticking need not retype it (project spec §10.4), and because a blank
+  field saves as an explicit `null`, a prompt that arrived blank would quietly destroy it.
 - An archived occasion still serves its shopping payload — archiving takes an occasion out of the
   default views and does nothing else.
 - A change here invalidates `["list", listId]` too, because it is the same claim list detail renders.

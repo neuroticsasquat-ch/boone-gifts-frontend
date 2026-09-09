@@ -208,6 +208,19 @@ describe("MyShopping", () => {
       await waitFor(() => expect(body).toBe(""));
     });
 
+    // Unticking leaves `amount_paid` standing on the server so re-ticking need
+    // not retype it. A blank field would be saved as an explicit null, so the
+    // prompt has to arrive carrying it.
+    it("re-ticks with the amount the claimer already recorded, not a blank", async () => {
+      renderShopping({ items: [item({ purchased_at: null, amount_paid: "42.00" })] });
+
+      await userEvent.click(
+        await screen.findByRole("checkbox", { name: 'Mark "Cast iron skillet" as bought' }),
+      );
+
+      expect(screen.getByLabelText("What did you pay?")).toHaveValue("42.00");
+    });
+
     it("abandons an unanswered prompt when the tick is taken back", async () => {
       const posted = vi.fn();
       renderShopping();
