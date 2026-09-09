@@ -1,16 +1,24 @@
 import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { clearFolderBudget, setFolderBudget } from "../api/folders";
 import { clearOccasionBudget, setOccasionBudget } from "../api/occasions";
 import { formatMoney } from "../lib/money";
-// Type-only, so it is erased at compile time and the two modules never form a
-// runtime cycle (`verbatimModuleSyntax`). The scope is the shopping tab's own
-// vocabulary and belongs with the tab.
-import type { ShoppingScope } from "./MyShopping";
-import type { BudgetRollup } from "../types";
+// The key is defined once, beside the scope it is built from, so this component
+// cannot drift from the cache entry the tab reads.
+import { shoppingKey, type ShoppingScope } from "../lib/shopping";
+import type { BudgetRollup, ShoppingPayload } from "../types";
 
-const INVALID = "Enter an amount of $0 or more.";
+/**
+ * What `BudgetWrite` accepts on the wire: a non-negative amount, at most two
+ * decimal places, `max_digits=10` — so eight digits before the point.
+ *
+ * The field refuses exactly what the server refuses. A looser check here would
+ * promise more than it can keep and turn a typo like `199.999` into a generic
+ * "failed to save" toast instead of an answerable message.
+ */
+const AMOUNT = /^\d{1,8}(\.\d{1,2})?$/;
+const INVALID = "Enter a dollar amount, like 200 or 199.99.";
 
 /**
  * The line at the top of every **My shopping** tab: what the viewer has spent,
@@ -19,52 +27,55 @@ const INVALID = "Enter an amount of $0 or more.";
  *
  * **Every figure here is the viewer's own.** Nothing on this surface is
  * attributed to, or aggregated across, another person — organizers set an
- * occasion's name and never see any money (`CONTEXT.md` rule 2).
+ * occasion's name and never see any money (`CONTEXT.md` rule 5).
  */
-export function BudgetLine({
-  budget,
-  scope,
-  onChanged,
-}: {
-  budget: BudgetRollup;
-  scope: ShoppingScope;
-  onChanged: () => void;
-}) {
+export function BudgetLine({ budget, scope }: { budget: BudgetRollup; scope: ShoppingScope }) {
+  const queryClient = useQueryClient();
   const hasBudget = budget.amount !== null;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
+
+  /** Both writes answer with the recomputed rollup, so the line is one round
+   *  trip and not a write followed by a re-read. Only the budget half of the
+   *  payload moves: a target changing cannot change which gifts are claimed. */
+  function applyRollup(rollup: BudgetRollup) {
+    setEditing(false);
+    queryClient.setQueryData<ShoppingPayload>(shoppingKey(scope), (previous) =>
+      previous ? { ...previous, budget: rollup } : previous,
+    );
+  }
+
+  /** The editor stays open — the amount they typed is still in it, and closing
+   *  would make them retype it to find out whether it took. The payload is
+   *  re-read because the line may now be asserting a budget that is gone: a
+   *  clear answers 404 when someone already removed it elsewhere. */
+  function reportFailure(message: string) {
+    toast.error(message);
+    queryClient.invalidateQueries({ queryKey: shoppingKey(scope) });
+  }
 
   const setMutation = useMutation({
     mutationFn: (amount: string) =>
       scope.kind === "occasion"
         ? setOccasionBudget(scope.id, amount)
         : setFolderBudget(scope.id, amount),
-    onSuccess: () => {
-      setEditing(false);
-      onChanged();
-    },
-    // The editor stays open on a failure: the amount they typed is still in it,
-    // and closing would make them retype it to find out whether it took.
-    onError: () => toast.error("Failed to save the budget."),
+    onSuccess: applyRollup,
+    onError: () => reportFailure("Failed to save the budget."),
   });
 
   const clearMutation = useMutation({
     mutationFn: () =>
       scope.kind === "occasion" ? clearOccasionBudget(scope.id) : clearFolderBudget(scope.id),
-    onSuccess: () => {
-      setEditing(false);
-      onChanged();
-    },
-    onError: () => toast.error("Failed to remove the budget."),
+    onSuccess: applyRollup,
+    onError: () => reportFailure("Failed to remove the budget."),
   });
 
   const isSaving = setMutation.isPending || clearMutation.isPending;
 
   const trimmed = draft.trim();
-  // Zero is a real target — "I mean to spend nothing here" — so it is only the
-  // empty field, and not a falsy value, that counts as nothing to save.
-  const parsed = Number(trimmed);
-  const isValid = trimmed !== "" && Number.isFinite(parsed) && parsed >= 0;
+  // Zero is a real target — "I mean to spend nothing here" — so it is the empty
+  // field, and not a falsy value, that counts as nothing to save.
+  const isValid = AMOUNT.test(trimmed);
 
   function openEditor() {
     // Seeded from the target already set, so editing one is a correction rather
@@ -155,15 +166,34 @@ export function BudgetLine({
  *
  * With no target set, the spend still shows. It is the viewer's own figure and
  * hiding it until they commit to a number would be tidier and less honest.
+ *
+ * **Every clause is built from a formatted value and dropped when that value
+ * will not format** (ADR 0003). Nothing here falls back to the raw wire string
+ * under a bare `$`, and nothing substitutes a zero for an amount that is
+ * missing — those are the two accidents the shared formatter exists to end.
  */
 function summarize(budget: BudgetRollup): string {
-  const spent = formatMoney(budget.spent) ?? budget.spent;
-  const target = formatMoney(budget.amount);
-  if (target === null) return `${spent} spent · no budget set`;
+  const spent = formatMoney(budget.spent);
+  // `amount === null` is the single predicate for "no budget set" — the same
+  // one the Set/Edit button reads — so the line and the button cannot disagree.
+  const target = budget.amount === null ? null : formatMoney(budget.amount);
 
-  const remaining = Number(budget.remaining);
-  const magnitude = formatMoney(String(Math.abs(remaining))) ?? "";
-  return `${spent} of ${target} spent · ${magnitude} ${remaining < 0 ? "over" : "left"}`;
+  const clauses: string[] = [];
+  if (spent !== null) clauses.push(target === null ? `${spent} spent` : `${spent} of ${target} spent`);
+
+  if (budget.amount === null) {
+    clauses.push("no budget set");
+  } else if (budget.remaining !== null) {
+    const isOver = Number(budget.remaining) < 0;
+    // The formatter would render an overspend as `-$12.00`; the line says
+    // `$12.00 over` instead, so the sign moves into the word while the
+    // magnitude still goes through the one formatter — dropping the leading
+    // `-` rather than round-tripping the value through `Number`.
+    const magnitude = formatMoney(isOver ? budget.remaining.slice(1) : budget.remaining);
+    if (magnitude !== null) clauses.push(`${magnitude} ${isOver ? "over" : "left"}`);
+  }
+
+  return clauses.join(" · ");
 }
 
 /**

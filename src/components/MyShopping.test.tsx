@@ -4,7 +4,8 @@ import { describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { server } from "../test/mocks/server";
-import { MyShopping, type ShoppingScope } from "./MyShopping";
+import { MyShopping } from "./MyShopping";
+import type { ShoppingScope } from "../lib/shopping";
 import type { BudgetRollup, ShoppingItem } from "../types";
 
 const API = "https://boone-gifts-api.localhost";
@@ -167,6 +168,43 @@ describe("MyShopping", () => {
     renderShopping({ items: [], rollup: budget({ total_count: 0 }) });
 
     expect(await screen.findByRole("button", { name: "Set budget" })).toBeInTheDocument();
+  });
+
+  // The write answers with the recomputed rollup, so the line changes without a
+  // second read of the payload.
+  it("shows a saved budget without re-reading the tab", async () => {
+    let reads = 0;
+    const payload = { budget: budget({ spent: "142.00" }), items: [item()] };
+    server.use(
+      http.get(`${API}/occasions/3/shopping`, () => {
+        reads += 1;
+        return HttpResponse.json(payload);
+      }),
+      http.put(`${API}/occasions/3/budget`, () =>
+        HttpResponse.json({
+          amount: "200.00",
+          spent: "142.00",
+          remaining: "58.00",
+          bought_count: 3,
+          total_count: 7,
+          unpriced_count: 0,
+        }),
+      ),
+    );
+    render(
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MyShopping scope={{ kind: "occasion", id: 3 }} />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Set budget" }));
+    await userEvent.type(screen.getByLabelText("Budget"), "200");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("$142.00 of $200.00 spent · $58.00 left")).toBeInTheDocument();
+    expect(reads).toBe(1);
   });
 
   it("says nothing is here yet, in the words of the scope", async () => {

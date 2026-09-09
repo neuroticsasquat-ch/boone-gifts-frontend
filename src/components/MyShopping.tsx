@@ -6,19 +6,10 @@ import { getFolderShopping } from "../api/folders";
 import { getOccasionShopping } from "../api/occasions";
 import { purchaseGift, unpurchaseGift } from "../api/gifts";
 import { formatMoney } from "../lib/money";
+import { shoppingKey, type ShoppingScope } from "../lib/shopping";
 import { BudgetLine } from "./BudgetLine";
 import { Spinner } from "./Spinner";
 import type { ShoppingItem } from "../types";
-
-/**
- * What bounds a shopping tab: an occasion the claims are *filed under*, or a
- * folder the claimed-from lists are *in*. The two reads return the same shape
- * from the same backend query and differ only in that scope, which is why one
- * component serves both pages rather than each growing its own copy.
- */
-export type ShoppingScope =
-  | { kind: "occasion"; id: number }
-  | { kind: "folder"; id: number };
 
 /** Nothing-here reads differently per scope, because *why* it is empty differs:
  *  an occasion holds claims filed under it, a folder holds claims on the lists
@@ -41,23 +32,19 @@ export function MyShopping({ scope }: { scope: ShoppingScope }) {
   const queryClient = useQueryClient();
 
   const shopping = useQuery({
-    queryKey: ["shopping", scope.kind, scope.id],
+    queryKey: shoppingKey(scope),
     queryFn: () =>
       scope.kind === "occasion" ? getOccasionShopping(scope.id) : getFolderShopping(scope.id),
   });
 
-  // A purchase ticked here is the same claim list detail renders, so its page
-  // is refreshed too rather than left showing yesterday's answer.
   function handleChanged(listId: number) {
-    refreshShopping();
+    // A purchase moves the budget's `spent` and its counts as well as the row,
+    // and the two arrive in one payload — so a single invalidation refreshes
+    // the claims and the line above them together, and they cannot disagree.
+    queryClient.invalidateQueries({ queryKey: shoppingKey(scope) });
+    // The same claim is what list detail renders, so its page is refreshed too
+    // rather than left showing yesterday's answer.
     queryClient.invalidateQueries({ queryKey: ["list", listId] });
-  }
-
-  // The budget rollup travels with the items, so one invalidation refreshes
-  // both. That is the point of the single payload: a budget line fetched apart
-  // from the claims can render a total the list beneath it contradicts.
-  function refreshShopping() {
-    queryClient.invalidateQueries({ queryKey: ["shopping", scope.kind, scope.id] });
   }
 
   if (shopping.isPending) return <Spinner />;
@@ -83,7 +70,7 @@ export function MyShopping({ scope }: { scope: ShoppingScope }) {
 
   return (
     <div className="space-y-4">
-      <BudgetLine budget={budget} scope={scope} onChanged={refreshShopping} />
+      <BudgetLine budget={budget} scope={scope} />
       {items.length === 0 ? (
         <div className="rounded-lg bg-white p-6 text-center shadow">
           <p className="text-gray-500">{EMPTY[scope.kind]}</p>

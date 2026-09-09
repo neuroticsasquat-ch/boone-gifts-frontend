@@ -188,6 +188,10 @@ describe("FolderDetail", () => {
 
     expect(await screen.findByText("Lego Set")).toBeInTheDocument();
     expect(screen.getByText("listed at $49.99")).toBeInTheDocument();
+    // The budget line is on this page too, not the occasion page alone
+    // (project spec §9.3); its own behaviour is `BudgetLine.test.tsx`.
+    expect(screen.getByText("$0.00 spent · no budget set")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Set budget" })).toBeInTheDocument();
   });
 
   // Folders have no index page, so back cannot mean one.
