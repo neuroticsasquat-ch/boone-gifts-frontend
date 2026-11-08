@@ -1,3 +1,5 @@
+> **Archived.** This repo now lives under `frontend/` in [neuroticsasquat-ch/boone-gifts](https://github.com/neuroticsasquat-ch/boone-gifts).
+
 # Boone Gifts Frontend
 
 React SPA for the Boone Gifts platform — a gift list and wishlist app where users create lists, share them with connections and families, and claim gifts without the list's owner seeing who claimed what.
